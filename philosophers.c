@@ -42,12 +42,12 @@ void pickup_forks(int ph_id) {
     // Wait for forks
     pthread_mutex_lock(&forks_mutex);
     while(forks[ph_id] == false || forks[(ph_id + 1) % NUM_PHILOSOPHERS] == false) {
-        printf("Philosopher %d waiting: ", ph_id);
+        printf("Philosopher %d waiting:  ", ph_id);
         print_forks();
         pthread_cond_wait(&forks_cond, &forks_mutex);
     }
     forks[ph_id] = forks[(ph_id + 1) % NUM_PHILOSOPHERS] = false;
-    printf("Philosopher %d eating:  ", ph_id);
+    printf("Philosopher %d eating:   ", ph_id);
     print_forks();
     pthread_mutex_unlock(&forks_mutex);
     sleep_rand();
@@ -57,7 +57,7 @@ void return_forks(int ph_id) {
     // Signal forks
     pthread_mutex_lock(&forks_mutex);
     forks[ph_id] = forks[(ph_id + 1) % NUM_PHILOSOPHERS] = true;
-    printf("Philosopher %d done:    ", ph_id);
+    printf("Philosopher %d thinking: ", ph_id);
     print_forks();
     pthread_mutex_unlock(&forks_mutex);
     pthread_cond_signal(&forks_cond);
