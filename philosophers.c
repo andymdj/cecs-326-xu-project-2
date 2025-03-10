@@ -10,11 +10,26 @@
 #define MAX_WAIT 3
 
 bool forks[NUM_PHILOSOPHERS];
-pthread_mutex_t forks_mutex[NUM_PHILOSOPHERS];
-pthread_cond_t forks_cond[NUM_PHILOSOPHERS];
+pthread_mutex_t forks_mutex;
+pthread_cond_t forks_cond;
 
 int sleep_rand() {
     sleep(rand() % (MAX_WAIT - MIN_WAIT + 1) + MIN_WAIT);
+}
+
+void print_forks() {
+    char forks_str[NUM_PHILOSOPHERS*3];
+    for(int i = 0; i < NUM_PHILOSOPHERS*3; i++) {
+        forks_str[i] = 'a';
+    }
+    for(int i = 0; i < NUM_PHILOSOPHERS; i++) {
+        int char_index = 1 + i * 3;
+        forks_str[char_index] = forks[i] ? i+48 : ' ';
+        forks_str[char_index + 1] = forks_str[char_index - 1] = ' ';
+    }
+    forks_str[0] = '[';
+    forks_str[NUM_PHILOSOPHERS*3 - 1] = ']';
+    printf("%s\n", forks_str);
 }
 
 void forks_init() {
@@ -23,43 +38,29 @@ void forks_init() {
     }
 }
 
-void forks_mutex_init() {
-    for(int i = 0; i < NUM_PHILOSOPHERS; i++) {
-        pthread_mutex_init(&forks_mutex[i], NULL);
-    }
-}
-
-void forks_mutex_destroy() {
-    for(int i = 0; i < NUM_PHILOSOPHERS; i++) {
-        pthread_mutex_destroy(&forks_mutex[i]);
-    }
-}
-
-void forks_cond_init() {
-    for(int i = 0; i < NUM_PHILOSOPHERS; i++) {
-        pthread_cond_init(&forks_cond[i], NULL);
-    }
-}
-
-void forks_cond_destroy() {
-    for(int i = 0; i < NUM_PHILOSOPHERS; i++) {
-        pthread_cond_destroy(&forks_cond[i]);
-    }
-}
-
 void pickup_forks(int ph_id) {
     // Wait for forks
-    pthread_mutex_lock(&forks_mutex[ph_id]);
-    pthread_mutex_lock(&forks_mutex[(ph_id + 1) % NUM_PHILOSOPHERS]);
-    printf("Philosopher %d eating: [%d, %d]\n", ph_id, ph_id, (ph_id+1)%NUM_PHILOSOPHERS);
+    pthread_mutex_lock(&forks_mutex);
+    while(forks[ph_id] == false || forks[(ph_id + 1) % NUM_PHILOSOPHERS] == false) {
+        printf("Philosopher %d waiting: ", ph_id);
+        print_forks();
+        pthread_cond_wait(&forks_cond, &forks_mutex);
+    }
+    forks[ph_id] = forks[(ph_id + 1) % NUM_PHILOSOPHERS] = false;
+    printf("Philosopher %d eating:  ", ph_id);
+    print_forks();
+    pthread_mutex_unlock(&forks_mutex);
     sleep_rand();
 }
 
 void return_forks(int ph_id) {
     // Signal forks
-    printf("Philosopher %d done:   [%d, %d]\n", ph_id, ph_id, (ph_id+1)%NUM_PHILOSOPHERS);
-    pthread_mutex_unlock(&forks_mutex[ph_id]);
-    pthread_mutex_unlock(&forks_mutex[(ph_id + 1) % NUM_PHILOSOPHERS]);
+    pthread_mutex_lock(&forks_mutex);
+    forks[ph_id] = forks[(ph_id + 1) % NUM_PHILOSOPHERS] = true;
+    printf("Philosopher %d done:    ", ph_id);
+    print_forks();
+    pthread_mutex_unlock(&forks_mutex);
+    pthread_cond_signal(&forks_cond);
     sleep_rand();
 }
 
@@ -74,8 +75,8 @@ void* philosopher(void* id) {
 int main() {
     srand(time(NULL));
     forks_init();
-    forks_mutex_init();
-    forks_cond_init();
+    pthread_mutex_init(&forks_mutex, NULL);
+    pthread_cond_init(&forks_cond, NULL);
 
     // Create philosopher threads passing each an id.
     pthread_t thread_ids[NUM_PHILOSOPHERS];
@@ -90,7 +91,7 @@ int main() {
         pthread_join(thread_ids[i], NULL);
     }
 
-    forks_mutex_destroy();
-    forks_cond_destroy();
+    pthread_mutex_destroy(&forks_mutex);
+    pthread_cond_destroy(&forks_cond);
     return 0;
 }
