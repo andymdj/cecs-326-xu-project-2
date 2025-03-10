@@ -19,12 +19,38 @@ void return_forks(int philosopher_number) {
     // Signal forks
 }
 
+void forks_mutex_init() {
+    for(int i = 0; i < 5; i++) {
+        pthread_mutex_init(&forks_mutex[i], NULL);
+    }
+}
+
+void forks_mutex_destroy() {
+    for(int i = 0; i < 5; i++) {
+        pthread_mutex_destroy(&forks_mutex[i]);
+    }
+}
+
+void forks_cond_init() {
+    for(int i = 0; i < 5; i++) {
+        pthread_cond_init(&forks_cond[i], NULL);
+    }
+}
+
+void forks_cond_destroy() {
+    for(int i = 0; i < 5; i++) {
+        pthread_cond_destroy(&forks_cond[i]);
+    }
+}
+
 void* philosopher(void* id) {
     printf("Philosopher %d created.\n", *(int*)id);
 }
 
 int main() {
     srand(time(NULL));
+    forks_mutex_init();
+    forks_cond_init();
 
     // Create philosopher threads passing each an id.
     pthread_t thread_ids[5];
@@ -38,5 +64,8 @@ int main() {
     for(int i = 0; i < 5; i++) {
         pthread_join(thread_ids[i], NULL);
     }
+
+    forks_mutex_destroy();
+    forks_cond_destroy();
     return 0;
 }
